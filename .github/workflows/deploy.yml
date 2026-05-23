@@ -1,0 +1,38 @@
+name: Simple Deploy Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }} .
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/sales-insights-497214/locations/global/workloadIdentityPools/github-actions-pool'
+          service_account: 'github-actions-sa@sales-insights-497214.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Push to Artifact Registry
+        run: |
+          gcloud auth configure-docker gcr.io
+          docker push gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy sales-insights-app \
+            --image gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }} \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --project ${{ vars.GCP_PROJECT_ID }}
