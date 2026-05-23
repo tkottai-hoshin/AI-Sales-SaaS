@@ -1,1 +1,54 @@
+name: DevSecOps Pipeline - SaaS App
 
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Security Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          severity: 'HIGH,CRITICAL'
+          format: 'table'
+          exit-code: '1'
+
+      - name: Build Docker Image
+        run: docker build -t gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }} .
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/sales-insights-497214/locations/global/workloadIdentityPools/github-actions-pool'
+          service_account: 'github-actions-sa@sales-insights-497214.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Push Docker Image
+        run: docker push gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy sales-insights-app \
+            --image gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }} \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --platform managed \
+            --project ${{ vars.GCP_PROJECT_ID }}
