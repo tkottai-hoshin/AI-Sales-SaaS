@@ -8,6 +8,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    # ← This is the most important fix
+    permissions:
+      contents: 'read'
+      id-token: 'write'     # Required for Google Cloud authentication
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -24,7 +29,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Push to Artifact Registry
+      - name: Push Docker Image
         run: |
           gcloud auth configure-docker gcr.io
           docker push gcr.io/${{ vars.GCP_PROJECT_ID }}/my-saas-app:${{ github.sha }}
