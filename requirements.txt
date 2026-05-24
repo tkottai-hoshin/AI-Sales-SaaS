@@ -1,4 +1,4 @@
 streamlit
 google-cloud-bigquery
-google-generativeai
+db-dtypes          # ← This is the missing package
 pandas
