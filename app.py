@@ -1,23 +1,20 @@
 import streamlit as st
 from google.cloud import bigquery
 import pandas as pd
-import os
 
 st.set_page_config(page_title="AI Sales Insights Assistant", layout="wide")
 st.title("🔍 AI Sales Insights Assistant")
-st.markdown("**Powered by Google Cloud — BigQuery + Gemini**")
+st.markdown("**Powered by Google Cloud — BigQuery**")
 
-# Initialize BigQuery client
 client = bigquery.Client()
 
-# Query helper function
 def run_query(query):
     try:
         df = client.query(query).to_dataframe()
         return df
     except Exception as e:
         st.error(f"Query Error: {str(e)}")
-        return pd.DataFrame()  # Return empty DataFrame on error
+        return pd.DataFrame()
 
 # Chat history
 if "messages" not in st.session_state:
@@ -36,20 +33,42 @@ if prompt := st.chat_input("Ask anything about sales performance..."):
         with st.spinner("Analyzing..."):
             response = ""
 
-            if any(word in prompt.lower() for word in ["revenue", "total", "sum"]):
+            prompt_lower = prompt.lower()
+
+            # Revenue related
+            if any(word in prompt_lower for word in ["revenue", "total revenue", "sum", "closed-won"]):
                 query = """
                 SELECT SUM(deal_value) as total_revenue 
                 FROM `sales_insights.sales_data` 
                 WHERE status = 'Closed-Won'
                 """
                 df = run_query(query)
-                if not df.empty and 'total_revenue' in df.columns:
-                    total = df['total_revenue'].iloc[0]
-                    response = f"**Total Closed-Won Revenue**: ${total:,.0f}"
-                else:
-                    response = "No revenue data found."
+                total = df['total_revenue'].iloc[0] if not df.empty else 0
+                response = f"**Total Closed-Won Revenue**: ${total:,.0f}"
 
-            elif any(word in prompt.lower() for word in ["lost", "loss", "reason"]):
+            # Q1 / Q2 specific
+            elif "q1" in prompt_lower:
+                query = """
+                SELECT SUM(deal_value) as total_revenue 
+                FROM `sales_insights.sales_data` 
+                WHERE quarter = 'Q1' AND status = 'Closed-Won'
+                """
+                df = run_query(query)
+                total = df['total_revenue'].iloc[0] if not df.empty else 0
+                response = f"**Q1 Closed-Won Revenue**: ${total:,.0f}"
+
+            elif "q2" in prompt_lower:
+                query = """
+                SELECT SUM(deal_value) as total_revenue 
+                FROM `sales_insights.sales_data` 
+                WHERE quarter = 'Q2' AND status = 'Closed-Won'
+                """
+                df = run_query(query)
+                total = df['total_revenue'].iloc[0] if not df.empty else 0
+                response = f"**Q2 Closed-Won Revenue**: ${total:,.0f}"
+
+            # Lost deals
+            elif any(word in prompt_lower for word in ["lost", "loss", "close lost"]):
                 query = """
                 SELECT loss_reason, COUNT(*) as count 
                 FROM `sales_insights.sales_data` 
@@ -61,16 +80,16 @@ if prompt := st.chat_input("Ask anything about sales performance..."):
                 if not df.empty:
                     response = "**Top Loss Reasons:**\n" + df.to_string(index=False)
                 else:
-                    response = "No loss data found."
+                    response = "No Closed-Lost deals found."
 
+            # Default / Summary
             else:
-                # Default: Show sample data
-                query = "SELECT * FROM `sales_insights.sales_data` LIMIT 10"
+                query = "SELECT * FROM `sales_insights.sales_data` LIMIT 12"
                 df = run_query(query)
                 if not df.empty:
-                    response = "Here is a sample of the sales data:\n" + df.to_string(index=False)
+                    response = "Here is a sample of the sales data:\n\n" + df.to_string(index=False)
                 else:
-                    response = "No data available at the moment."
+                    response = "No data available."
 
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
