@@ -1,2 +1,2 @@
 # AI-Sales-SaaS
-AI Sales Project
+AI Sales Assistant with Google Cloud
