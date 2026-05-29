@@ -1,5 +1,7 @@
 streamlit
 google-cloud-bigquery
+google-cloud-vision
+google-generativeai
 db-dtypes
 pandas
 plotly
