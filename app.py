@@ -1,21 +1,13 @@
 import streamlit as st
 from google.cloud import bigquery, vision
-import vertexai
-from vertexai.generative_models import GenerativeModel
 import pandas as pd
 import plotly.express as px
 
 st.set_page_config(page_title="AI Sales Insights Assistant", layout="wide")
 st.title("🔍 AI Sales Insights Assistant")
-st.markdown("**Powered by Google Cloud — BigQuery + Vision API + Vertex AI**")
+st.markdown("**Powered by Google Cloud — BigQuery + Vision API**")
 
-# Initialize Vertex AI with correct location
-vertexai.init(project="sales-insights-497214", location="us-central1")
-
-# Use a more stable model name
-gemini_model = GenerativeModel("gemini-1.5-flash-001")   # ← Changed here
-
-# Initialize other clients
+# Initialize clients
 bq_client = bigquery.Client()
 vision_client = vision.ImageAnnotatorClient()
 
@@ -28,13 +20,13 @@ def run_query(query):
         return pd.DataFrame()
 
 # ========================
-# DOCUMENT INTELLIGENCE
+# DOCUMENT INTELLIGENCE (Cloud Vision)
 # ========================
 st.sidebar.header("📄 Document Intelligence")
 uploaded_file = st.sidebar.file_uploader("Upload receipt, invoice, or contract", type=["jpg", "jpeg", "png", "pdf"])
 
 if uploaded_file:
-    with st.spinner("Processing with Cloud Vision + Vertex AI..."):
+    with st.spinner("Processing document with Cloud Vision API..."):
         content = uploaded_file.read()
         image = vision.Image(content=content)
         
@@ -43,14 +35,10 @@ if uploaded_file:
         
         if extracted_text:
             st.sidebar.success("✅ Document Processed!")
-            
-            gemini_prompt = f"Extract and summarize the key information professionally:\n\n{extracted_text}"
-            gemini_response = gemini_model.generate_content(gemini_prompt)
-            
-            st.sidebar.subheader("📋 Extracted Text")
-            st.sidebar.text_area("Raw Text", extracted_text, height=150)
-            st.sidebar.markdown("**Gemini Summary:**")
-            st.sidebar.write(gemini_response.text)
+            st.sidebar.subheader("Extracted Text")
+            st.sidebar.text_area("Raw Extracted Text", extracted_text, height=250)
+        else:
+            st.sidebar.error("Could not extract text from the document.")
 
 # ========================
 # MAIN CHAT INTERFACE
