@@ -9,13 +9,15 @@ st.set_page_config(page_title="AI Sales Insights Assistant", layout="wide")
 st.title("🔍 AI Sales Insights Assistant")
 st.markdown("**Powered by Google Cloud — BigQuery + Vision API + Vertex AI**")
 
-# Initialize clients
+# Initialize Vertex AI with correct location
+vertexai.init(project="sales-insights-497214", location="us-central1")
+
+# Use a more stable model name
+gemini_model = GenerativeModel("gemini-1.5-flash-001")   # ← Changed here
+
+# Initialize other clients
 bq_client = bigquery.Client()
 vision_client = vision.ImageAnnotatorClient()
-
-# Initialize Vertex AI (uses Application Default Credentials)
-vertexai.init(project="sales-insights-497214", location="us-central1")
-gemini_model = GenerativeModel("gemini-1.5-flash")
 
 def run_query(query):
     try:
