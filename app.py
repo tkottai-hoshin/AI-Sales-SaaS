@@ -1,22 +1,21 @@
 import streamlit as st
 from google.cloud import bigquery, vision
-import google.generativeai as genai
+import vertexai
+from vertexai.generative_models import GenerativeModel
 import pandas as pd
 import plotly.express as px
-from google.auth import default
 
 st.set_page_config(page_title="AI Sales Insights Assistant", layout="wide")
 st.title("🔍 AI Sales Insights Assistant")
-st.markdown("**Powered by Google Cloud — BigQuery + Vision API + Gemini**")
+st.markdown("**Powered by Google Cloud — BigQuery + Vision API + Vertex AI**")
 
 # Initialize clients
 bq_client = bigquery.Client()
 vision_client = vision.ImageAnnotatorClient()
 
-# Configure Gemini using Application Default Credentials (best for Cloud Run)
-credentials, project = default()
-genai.configure(credentials=credentials)
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+# Initialize Vertex AI (uses Application Default Credentials)
+vertexai.init(project="sales-insights-497214", location="us-central1")
+gemini_model = GenerativeModel("gemini-1.5-flash")
 
 def run_query(query):
     try:
@@ -33,7 +32,7 @@ st.sidebar.header("📄 Document Intelligence")
 uploaded_file = st.sidebar.file_uploader("Upload receipt, invoice, or contract", type=["jpg", "jpeg", "png", "pdf"])
 
 if uploaded_file:
-    with st.spinner("Processing with Cloud Vision + Gemini..."):
+    with st.spinner("Processing with Cloud Vision + Vertex AI..."):
         content = uploaded_file.read()
         image = vision.Image(content=content)
         
